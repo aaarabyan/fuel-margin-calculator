@@ -113,16 +113,15 @@ export function App() {
             <ProfitSummary result={result} compact />
             <div className="w-full h-1 bg-white/10 rounded-sm mt-2 overflow-hidden">
               <div
-                className={`h-full rounded-sm transition-all duration-400 ${
-                  result.netProfitAmd >= 0
+                className={`h-full rounded-sm transition-all duration-400 ${result.netProfitAmd >= 0
                     ? 'bg-gradient-to-r from-accent to-emerald-400'
                     : 'bg-gradient-to-r from-danger to-red-400'
-                }`}
+                  }`}
                 style={{
                   width: `${result.netProfitAmd >= 0
                     ? Math.min(100, 50 + result.netProfitAmd / 10000)
                     : Math.max(5, 50 + result.netProfitAmd / 10000)
-                  }%`,
+                    }%`,
                 }}
               />
             </div>
@@ -157,7 +156,7 @@ export function App() {
           <div className="flex-[1_1_560px] bg-card backdrop-blur-xl border border-card-border rounded-[20px] p-4 sm:p-5 shadow-[0_4px_24px_rgba(0,0,0,0.2)] hover:border-sky/25 transition-border-color duration-300">
             <FuelTabs current={inputs.fuelType} onChange={handleFuelChange} />
 
-            <div className="grid grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-3 sm:gap-4 mt-4">
+            <div className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4 mt-4">
               <InputField
                 label="Цена закупки ($/тонна)"
                 value={inputs.purchaseUsd}

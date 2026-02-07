@@ -26,7 +26,7 @@ export function InputField({ label, value, onChange, step = '0.01', tooltip, suf
   return (
     <div className="flex flex-col relative">
       <div className="flex items-center gap-1 mb-1.5">
-        <label className="text-[11px] font-medium text-muted uppercase tracking-wide leading-tight">
+        <label className="text-xs font-medium text-muted uppercase tracking-wide leading-tight">
           {label}
         </label>
         {tooltip && (
@@ -52,7 +52,7 @@ export function InputField({ label, value, onChange, step = '0.01', tooltip, suf
           step={step}
           value={value}
           onChange={(e) => onChange(Number(e.target.value) || 0)}
-          className="w-full py-3 px-3.5 rounded-xl border border-line bg-input-bg text-text outline-none text-base font-semibold font-[inherit] transition-all duration-200 hover:border-sky/30 focus:border-accent focus:shadow-[0_0_0_3px_rgba(34,197,94,0.15)] min-h-[44px]"
+          className="w-full py-4 px-4 rounded-xl border border-line bg-input-bg text-text outline-none text-lg font-semibold font-[inherit] transition-all duration-200 hover:border-sky/30 focus:border-accent focus:shadow-[0_0_0_3px_rgba(34,197,94,0.15)] min-h-[52px]"
         />
         {suffix && (
           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted/60 pointer-events-none">
