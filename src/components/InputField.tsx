@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Info } from 'lucide-react';
+import { Info, X } from 'lucide-react';
 
 interface InputFieldProps {
   label: string;
@@ -12,17 +12,12 @@ interface InputFieldProps {
 
 export function InputField({ label, value, onChange, step = '0.01', tooltip, suffix }: InputFieldProps) {
   const [showTooltip, setShowTooltip] = useState(false);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const tooltipRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const handleTooltipToggle = () => {
-    clearTimeout(timeoutRef.current);
+  const handleTooltipToggle = (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     setShowTooltip(!showTooltip);
-  };
-
-  const handleTooltipLeave = () => {
-    timeoutRef.current = setTimeout(() => setShowTooltip(false), 200);
   };
 
   // Закрыть тултип при клике вне
@@ -35,67 +30,54 @@ export function InputField({ label, value, onChange, step = '0.01', tooltip, suf
       }
     };
 
-    document.addEventListener('touchstart', handleClickOutside);
-    document.addEventListener('mousedown', handleClickOutside);
+    // Небольшая задержка чтобы не закрылся сразу
+    const timer = setTimeout(() => {
+      document.addEventListener('touchstart', handleClickOutside);
+      document.addEventListener('click', handleClickOutside);
+    }, 100);
 
     return () => {
+      clearTimeout(timer);
       document.removeEventListener('touchstart', handleClickOutside);
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('click', handleClickOutside);
     };
-  }, [showTooltip]);
-
-  // Корректировка позиции тултипа чтобы не вылезал за экран
-  useEffect(() => {
-    if (showTooltip && tooltipRef.current) {
-      const tooltip = tooltipRef.current;
-      const rect = tooltip.getBoundingClientRect();
-
-      // Если вылезает слева
-      if (rect.left < 8) {
-        tooltip.style.left = '0';
-        tooltip.style.transform = 'translateX(0)';
-      }
-      // Если вылезает справа
-      else if (rect.right > window.innerWidth - 8) {
-        tooltip.style.left = 'auto';
-        tooltip.style.right = '0';
-        tooltip.style.transform = 'translateX(0)';
-      }
-    }
   }, [showTooltip]);
 
   return (
     <div className="flex flex-col relative" ref={containerRef}>
-      <div className="flex items-start gap-1 mb-1.5">
-        <label className="text-[10px] sm:text-xs font-medium text-muted uppercase tracking-wide leading-tight flex-1 min-w-0">
+      <div className="flex items-center gap-1.5 mb-1.5">
+        <label className="text-[10px] font-medium text-muted uppercase tracking-wide leading-tight truncate">
           {label}
         </label>
         {tooltip && (
-          <div className="relative flex-shrink-0"
-            onMouseEnter={() => { clearTimeout(timeoutRef.current); setShowTooltip(true); }}
-            onMouseLeave={handleTooltipLeave}
+          <button
+            type="button"
             onClick={handleTooltipToggle}
+            onTouchEnd={handleTooltipToggle}
+            className="flex-shrink-0 touch-manipulation"
           >
-            <Info size={14} className="text-muted/50 cursor-help" />
-            {showTooltip && (
-              <div
-                ref={tooltipRef}
-                className="fixed z-[100] px-3 py-2.5 bg-[#1a2332] border border-sky/30 rounded-xl text-xs text-text shadow-2xl animate-fade-in"
-                style={{
-                  width: 'min(280px, calc(100vw - 32px))',
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  top: 'auto',
-                  bottom: 'auto',
-                  marginTop: '8px',
-                }}
-              >
-                <div className="leading-relaxed">{tooltip}</div>
-              </div>
-            )}
-          </div>
+            <Info size={13} className="text-muted/50" />
+          </button>
         )}
       </div>
+
+      {/* Tooltip - появляется под лейблом, на всю ширину поля */}
+      {showTooltip && tooltip && (
+        <div className="absolute left-0 right-0 top-6 z-[100] animate-fade-in">
+          <div className="bg-[#1a2332] border border-sky/30 rounded-xl p-3 shadow-2xl">
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-xs text-text leading-relaxed flex-1">{tooltip}</p>
+              <button
+                onClick={() => setShowTooltip(false)}
+                className="text-muted/50 hover:text-text flex-shrink-0"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="relative">
         <input
           type="number"
@@ -106,7 +88,7 @@ export function InputField({ label, value, onChange, step = '0.01', tooltip, suf
           className="w-full py-3 px-3 rounded-xl border border-line bg-input-bg text-text outline-none text-base font-semibold font-[inherit] transition-all duration-200 hover:border-sky/30 focus:border-accent focus:shadow-[0_0_0_3px_rgba(34,197,94,0.15)] min-h-[48px]"
         />
         {suffix && (
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] sm:text-xs text-muted/60 pointer-events-none">
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted/60 pointer-events-none">
             {suffix}
           </span>
         )}
