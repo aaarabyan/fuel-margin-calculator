@@ -3,6 +3,7 @@ import type { Inputs, FuelType, Scenario } from './types';
 import { FUELS, DEFAULT_INPUTS } from './constants';
 import { calculate } from './calc';
 import { useLocalStorage } from './hooks/useLocalStorage';
+import { useExchangeRate } from './hooks/useExchangeRate';
 import { FuelTabs } from './components/FuelTabs';
 import { InputField } from './components/InputField';
 import { ProfitSummary } from './components/ProfitSummary';
@@ -10,7 +11,8 @@ import { DataTable } from './components/DataTable';
 import { SensitivityChart } from './components/SensitivityChart';
 import { CostBreakdownChart } from './components/CostBreakdownChart';
 import { ScenarioManager } from './components/ScenarioManager';
-import { Copy, Check, ChevronDown, ChevronUp } from 'lucide-react';
+import { ExportButton } from './components/ExportButton';
+import { Copy, Check, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
 import { fmtAmd0, fmtUsd2, fmtAmdPerL, fmtPct } from './format';
 
 export function App() {
@@ -19,6 +21,9 @@ export function App() {
   const [copied, setCopied] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(true);
   const [showTable, setShowTable] = useState(true);
+
+  // Exchange rate hook
+  const { rate: fetchedRate, loading: rateLoading, lastUpdated: rateDate, refetch: refetchRate } = useExchangeRate();
 
   const result = useMemo(() => calculate(inputs), [inputs]);
 
@@ -101,13 +106,16 @@ export function App() {
       {/* Mobile sticky header */}
       <div className="sm:hidden fixed top-0 left-0 right-0 z-[1000] bg-bg shadow-[0_4px_20px_rgba(0,0,0,0.5)]" style={{ paddingTop: 'calc(8px + env(safe-area-inset-top, 0px))' }}>
         <div className="px-2.5 pb-2">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-7 h-7 bg-gradient-to-br from-accent to-sky rounded-lg flex items-center justify-center text-sm">
-              ⛽
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 bg-gradient-to-br from-accent to-sky rounded-lg flex items-center justify-center text-sm">
+                ⛽
+              </div>
+              <h1 className="text-sm font-bold bg-gradient-to-r from-text to-muted bg-clip-text text-transparent">
+                Калькулятор маржинальности
+              </h1>
             </div>
-            <h1 className="text-sm font-bold bg-gradient-to-r from-text to-muted bg-clip-text text-transparent">
-              Калькулятор маржинальности
-            </h1>
+            <ExportButton result={result} inputs={inputs} />
           </div>
           <div className="bg-card backdrop-blur-xl border border-card-border rounded-xl p-2.5">
             <ProfitSummary result={result} compact />
@@ -200,14 +208,27 @@ export function App() {
                 tooltip="Объём бензовоза в литрах (рассчитывается из тоннажа и плотности)"
                 suffix="л"
               />
-              <InputField
-                label="Курс доллара (AMD/$)"
-                value={inputs.usdRate}
-                onChange={(v) => updateField('usdRate', v)}
-                step="0.0001"
-                tooltip="Текущий обменный курс доллара к армянскому драму"
-                suffix="AMD/$"
-              />
+              <div className="relative">
+                <InputField
+                  label="Курс доллара (AMD/$)"
+                  value={inputs.usdRate}
+                  onChange={(v) => updateField('usdRate', v)}
+                  step="0.0001"
+                  tooltip={`Курс ЦБ Армении${rateDate ? ` от ${rateDate}` : ''}`}
+                  suffix="AMD/$"
+                />
+                <button
+                  onClick={async () => {
+                    await refetchRate();
+                    if (fetchedRate) updateField('usdRate', fetchedRate);
+                  }}
+                  disabled={rateLoading}
+                  className="absolute right-12 top-6 p-1.5 rounded-lg bg-sky/20 hover:bg-sky/30 text-sky transition-colors disabled:opacity-50"
+                  title="Обновить курс ЦБ Армении"
+                >
+                  <RefreshCw size={14} className={rateLoading ? 'animate-spin' : ''} />
+                </button>
+              </div>
               <InputField
                 label="Плотность (кг/л)"
                 value={inputs.density}
