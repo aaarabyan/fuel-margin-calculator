@@ -1,97 +1,122 @@
 import { useState } from 'react';
 import type { CalcResult, FuelType } from '../types';
 import { fmtAmd0, fmtUsd2, fmtNum2, fmtNum4, fmtPct, fmtAmdPerL, fmtUsdPerL } from '../format';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronUp, TrendingUp, TrendingDown, DollarSign, Truck, Calculator, Receipt } from 'lucide-react';
 
 interface DataTableProps {
   result: CalcResult;
   inputs: { sellAmdPerL: number; truckTons: number; fuelType: FuelType };
 }
 
-interface TableSection {
-  title: string;
-  key: string;
-  rows: TableRow[];
-}
-
-interface TableRow {
+interface DataItem {
   label: string;
-  amd: string;
-  usd: string;
-  bold?: boolean;
+  value: string;
+  subValue?: string;
+  highlight?: 'positive' | 'negative' | 'neutral';
   hidden?: boolean;
 }
 
+interface DataSection {
+  title: string;
+  key: string;
+  icon: React.ReactNode;
+  items: DataItem[];
+}
+
 export function DataTable({ result, inputs }: DataTableProps) {
-  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['profit', 'perton']));
   const r = result;
   const toUsd = (amd: number) => amd / r.rate;
 
-  const sections: TableSection[] = [
+  const sections: DataSection[] = [
     {
-      title: 'Входные данные',
-      key: 'input',
-      rows: [
-        { label: 'Цена закупки ($/тонна)', amd: fmtAmd0(r.purchaseAmd), usd: fmtUsd2(toUsd(r.purchaseAmd)) },
-        { label: 'Доставка ($/тонна)', amd: fmtAmd0(r.deliveryAmd), usd: fmtUsd2(toUsd(r.deliveryAmd)) },
-        { label: 'Пошлина ($/тонна)', amd: fmtAmd0(r.customsDutyAmd), usd: fmtUsd2(toUsd(r.customsDutyAmd)) },
-        { label: 'Цена продажи (AMD/литр)', amd: `${fmtNum2(inputs.sellAmdPerL)} AMD/л`, usd: `${fmtNum4(toUsd(inputs.sellAmdPerL))} $/л` },
-        { label: 'Тоннаж машины (тонн)', amd: fmtNum2(inputs.truckTons), usd: '—' },
-        { label: 'Курс доллара (AMD/$)', amd: fmtNum4(r.rate), usd: '—' },
-        { label: 'Плотность (кг/л)', amd: fmtNum4(r.density), usd: '—' },
+      title: 'Ключевые показатели',
+      key: 'profit',
+      icon: <TrendingUp size={16} />,
+      items: [
+        {
+          label: 'Чистая прибыль',
+          value: fmtAmd0(r.netProfitAmd),
+          subValue: `≈ ${fmtUsd2(toUsd(r.netProfitAmd))}`,
+          highlight: r.netProfitAmd >= 0 ? 'positive' : 'negative'
+        },
+        {
+          label: 'Маржа на литр',
+          value: fmtAmdPerL(r.marginPerLAmd),
+          subValue: fmtPct(r.marginPct),
+          highlight: r.marginPerLAmd >= 0 ? 'positive' : 'negative'
+        },
+        {
+          label: 'Себестоимость литра',
+          value: fmtAmdPerL(r.costPerLAmd),
+          subValue: `≈ ${fmtUsdPerL(toUsd(r.costPerLAmd))}`
+        },
+        {
+          label: 'Безубыточная цена',
+          value: fmtAmdPerL(r.breakEvenPriceAmd),
+          subValue: `≈ ${fmtUsdPerL(toUsd(r.breakEvenPriceAmd))}`
+        },
+        {
+          label: 'Доход на машину',
+          value: fmtAmd0(r.incomeTruckAmd),
+          subValue: `≈ ${fmtUsd2(toUsd(r.incomeTruckAmd))}`
+        },
+      ],
+    },
+    {
+      title: 'Расчёт на тонну',
+      key: 'perton',
+      icon: <Calculator size={16} />,
+      items: [
+        { label: 'Литров в тонне', value: fmtNum2(r.litersPerTon) },
+        { label: 'База для НДС', value: fmtAmd0(r.vatBaseAmd), subValue: `≈ ${fmtUsd2(toUsd(r.vatBaseAmd))}` },
+        { label: 'НДС 20%', value: fmtAmd0(r.vatAmd), subValue: `≈ ${fmtUsd2(toUsd(r.vatAmd))}` },
+        { label: 'Итого затрат', value: fmtAmd0(r.totalCostTonAmd), subValue: `≈ ${fmtUsd2(toUsd(r.totalCostTonAmd))}`, highlight: 'neutral' },
+        { label: 'Доход на тонну', value: fmtAmd0(r.incomeTonAmd), subValue: `≈ ${fmtUsd2(toUsd(r.incomeTonAmd))}` },
+      ],
+    },
+    {
+      title: 'Расчёт на машину',
+      key: 'pertruck',
+      icon: <Truck size={16} />,
+      items: [
+        { label: 'Объём (литров)', value: fmtNum2(r.totalLiters) },
+        { label: 'Налоги всего', value: fmtAmd0(r.taxBlockAmd), subValue: `≈ ${fmtUsd2(toUsd(r.taxBlockAmd))}` },
+        { label: 'Себестоимость', value: fmtAmd0(r.totalCostTruckAmd), subValue: `≈ ${fmtUsd2(toUsd(r.totalCostTruckAmd))}` },
+        { label: 'Выручка', value: fmtAmd0(r.revenueTruckAmd), subValue: `≈ ${fmtUsd2(toUsd(r.revenueTruckAmd))}` },
       ],
     },
     {
       title: 'Налоги и сборы',
       key: 'tax',
-      rows: [
-        { label: 'Тип топлива', amd: r.fuelName, usd: '—' },
-        { label: 'Акциз (AMD/тонна)', amd: fmtAmd0(r.exciseAmd), usd: fmtUsd2(toUsd(r.exciseAmd)) },
-        { label: 'Разница до минимального платежа', amd: fmtAmd0(r.gasDiffAmd), usd: fmtUsd2(toUsd(r.gasDiffAmd)), hidden: inputs.fuelType !== 'AI92' },
-        { label: 'Экологический налог (2%)', amd: fmtAmd0(r.ecoAmd), usd: fmtUsd2(toUsd(r.ecoAmd)) },
-        { label: 'Пошлина', amd: fmtAmd0(r.customsDutyAmd), usd: fmtUsd2(toUsd(r.customsDutyAmd)) },
+      icon: <Receipt size={16} />,
+      items: [
+        { label: 'Тип топлива', value: r.fuelName },
+        { label: 'Акциз', value: fmtAmd0(r.exciseAmd), subValue: `≈ ${fmtUsd2(toUsd(r.exciseAmd))}` },
+        { label: 'Разница до мин. платежа', value: fmtAmd0(r.gasDiffAmd), subValue: `≈ ${fmtUsd2(toUsd(r.gasDiffAmd))}`, hidden: inputs.fuelType !== 'AI92' },
+        { label: 'Экологический (2%)', value: fmtAmd0(r.ecoAmd), subValue: `≈ ${fmtUsd2(toUsd(r.ecoAmd))}` },
+        { label: 'Пошлина', value: fmtAmd0(r.customsDutyAmd), subValue: `≈ ${fmtUsd2(toUsd(r.customsDutyAmd))}` },
+        { label: 'Переплата НДС/л', value: fmtAmdPerL(r.overVatPerLAmd), subValue: `≈ ${fmtUsdPerL(toUsd(r.overVatPerLAmd))}` },
       ],
     },
     {
-      title: 'Расчёт на 1 тонну',
-      key: 'perton',
-      rows: [
-        { label: 'База для НДС (закупка+доставка+акциз)', amd: fmtAmd0(r.vatBaseAmd), usd: fmtUsd2(toUsd(r.vatBaseAmd)) },
-        { label: 'НДС 20%', amd: fmtAmd0(r.vatAmd), usd: fmtUsd2(toUsd(r.vatAmd)) },
-        { label: 'Итого затрат на тонну', amd: fmtAmd0(r.totalCostTonAmd), usd: fmtUsd2(toUsd(r.totalCostTonAmd)), bold: true },
-        { label: 'Литров в тонне', amd: fmtNum4(r.litersPerTon), usd: '—' },
-        { label: 'Себестоимость 1л', amd: fmtAmdPerL(r.costPerLAmd), usd: fmtUsdPerL(toUsd(r.costPerLAmd)) },
-        { label: 'Маржа на 1л', amd: fmtAmdPerL(r.marginPerLAmd), usd: fmtUsdPerL(toUsd(r.marginPerLAmd)) },
-        { label: 'Маржа %', amd: fmtPct(r.marginPct), usd: '—' },
-      ],
-    },
-    {
-      title: 'Расчёт на 1 машину',
-      key: 'pertruck',
-      rows: [
-        { label: 'Общий объём (л.)', amd: fmtNum4(r.totalLiters), usd: '—' },
-        { label: 'НДС+Акциз+ЭН+Пошлина на весь объём', amd: fmtAmd0(r.taxBlockAmd), usd: fmtUsd2(toUsd(r.taxBlockAmd)) },
-        { label: 'Себестоимость всего', amd: fmtAmd0(r.totalCostTruckAmd), usd: fmtUsd2(toUsd(r.totalCostTruckAmd)) },
-        { label: 'Выручка (все литры)', amd: fmtAmd0(r.revenueTruckAmd), usd: fmtUsd2(toUsd(r.revenueTruckAmd)) },
-      ],
-    },
-    {
-      title: 'Доход / НДС / прибыль',
-      key: 'profit',
-      rows: [
-        { label: 'Доход на 1 тонну', amd: fmtAmd0(r.incomeTonAmd), usd: fmtUsd2(toUsd(r.incomeTonAmd)) },
-        { label: 'Доход на 1 машину', amd: fmtAmd0(r.incomeTruckAmd), usd: fmtUsd2(toUsd(r.incomeTruckAmd)) },
-        { label: 'Переплаченный НДС на 1 литр', amd: fmtAmdPerL(r.overVatPerLAmd), usd: fmtUsdPerL(toUsd(r.overVatPerLAmd)) },
-        { label: 'Переплаченный НДС на 1 тонну', amd: fmtAmd0(r.overVatPerTonAmd), usd: fmtUsd2(toUsd(r.overVatPerTonAmd)) },
-        { label: 'Прибыль до налогов', amd: fmtAmd0(r.profitAfterVatAmd), usd: fmtUsd2(toUsd(r.profitAfterVatAmd)) },
-        { label: 'Безубыточная цена продажи', amd: fmtAmdPerL(r.breakEvenPriceAmd), usd: fmtUsdPerL(toUsd(r.breakEvenPriceAmd)) },
-        { label: 'Чистая прибыль (18% налог)', amd: fmtAmd0(r.netProfitAmd), usd: fmtUsd2(toUsd(r.netProfitAmd)), bold: true },
+      title: 'Входные данные',
+      key: 'input',
+      icon: <DollarSign size={16} />,
+      items: [
+        { label: 'Закупка', value: fmtAmd0(r.purchaseAmd), subValue: `≈ ${fmtUsd2(toUsd(r.purchaseAmd))}` },
+        { label: 'Доставка', value: fmtAmd0(r.deliveryAmd), subValue: `≈ ${fmtUsd2(toUsd(r.deliveryAmd))}` },
+        { label: 'Пошлина (вход)', value: fmtAmd0(r.customsDutyAmd), subValue: `≈ ${fmtUsd2(toUsd(r.customsDutyAmd))}` },
+        { label: 'Цена продажи', value: `${fmtNum2(inputs.sellAmdPerL)} AMD/л` },
+        { label: 'Тоннаж', value: `${fmtNum2(inputs.truckTons)} т` },
+        { label: 'Курс USD', value: `${fmtNum2(r.rate)} AMD/$` },
+        { label: 'Плотность', value: `${fmtNum4(r.density)} кг/л` },
       ],
     },
   ];
 
   const toggleSection = (key: string) => {
-    setCollapsedSections(prev => {
+    setExpandedSections(prev => {
       const next = new Set(prev);
       if (next.has(key)) {
         next.delete(key);
@@ -103,73 +128,71 @@ export function DataTable({ result, inputs }: DataTableProps) {
   };
 
   return (
-    <div className="w-full max-w-full overflow-x-auto rounded-2xl border border-line bg-black/15" style={{ WebkitOverflowScrolling: 'touch' }}>
-      <table className="w-full border-collapse min-w-[680px] bg-transparent">
-        <thead>
-          <tr>
-            <th className="text-left text-[11px] font-semibold text-muted bg-black/30 uppercase tracking-wide px-3 py-3 sticky top-0 z-[1]" style={{ width: '52%' }}>
-              Показатель
-            </th>
-            <th className="text-left text-[11px] font-semibold text-muted bg-black/30 uppercase tracking-wide px-3 py-3 sticky top-0 z-[1]" style={{ width: '24%' }}>
-              AMD
-            </th>
-            <th className="text-left text-[11px] font-semibold text-muted bg-black/30 uppercase tracking-wide px-3 py-3 sticky top-0 z-[1]" style={{ width: '24%' }}>
-              USD
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {sections.map((section) => {
-            const isCollapsed = collapsedSections.has(section.key);
-            return (
-              <SectionBlock
-                key={section.key}
-                section={section}
-                isCollapsed={isCollapsed}
-                onToggle={() => toggleSection(section.key)}
-              />
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
-  );
-}
+    <div className="space-y-3">
+      {sections.map((section) => {
+        const isExpanded = expandedSections.has(section.key);
+        const visibleItems = section.items.filter(item => !item.hidden);
 
-function SectionBlock({ section, isCollapsed, onToggle }: {
-  section: TableSection;
-  isCollapsed: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <>
-      <tr
-        className="cursor-pointer select-none group"
-        onClick={onToggle}
-      >
-        <td
-          colSpan={3}
-          className="bg-gradient-to-r from-sky/8 to-transparent text-sky font-semibold text-xs uppercase tracking-wide px-3 py-3 border-b border-line"
-        >
-          <span className="flex items-center gap-2">
-            {isCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
-            {section.title}
-          </span>
-        </td>
-      </tr>
-      {!isCollapsed && section.rows.filter(r => !r.hidden).map((row, i) => (
-        <tr key={i} className="hover:bg-white/[0.02] transition-colors duration-150">
-          <td className={`px-3 py-3 text-[13px] border-b border-line ${row.bold ? 'font-bold text-text' : 'text-text/80'}`}>
-            {row.label}
-          </td>
-          <td className={`px-3 py-3 text-[13px] border-b border-line font-mono whitespace-nowrap ${row.bold ? 'font-bold text-accent' : 'font-medium'}`}>
-            {row.amd}
-          </td>
-          <td className={`px-3 py-3 text-[13px] border-b border-line font-mono whitespace-nowrap ${row.bold ? 'font-bold text-accent' : 'font-medium'}`}>
-            {row.usd}
-          </td>
-        </tr>
-      ))}
-    </>
+        return (
+          <div
+            key={section.key}
+            className="bg-black/20 rounded-2xl border border-line overflow-hidden"
+          >
+            {/* Section Header */}
+            <button
+              onClick={() => toggleSection(section.key)}
+              className="w-full flex items-center justify-between px-4 py-3.5 cursor-pointer hover:bg-white/[0.02] transition-colors duration-200"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-sky/10 flex items-center justify-center text-sky">
+                  {section.icon}
+                </div>
+                <span className="font-semibold text-sm text-text">{section.title}</span>
+                <span className="text-xs text-muted/60 bg-white/5 px-2 py-0.5 rounded-full">
+                  {visibleItems.length}
+                </span>
+              </div>
+              <div className="text-muted">
+                {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+              </div>
+            </button>
+
+            {/* Section Content */}
+            {isExpanded && (
+              <div className="px-4 pb-4 animate-fade-in">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {visibleItems.map((item, idx) => (
+                    <div
+                      key={idx}
+                      className={`flex items-center justify-between p-3 rounded-xl ${item.highlight === 'positive' ? 'bg-accent/10 border border-accent/20' :
+                          item.highlight === 'negative' ? 'bg-danger/10 border border-danger/20' :
+                            item.highlight === 'neutral' ? 'bg-sky/10 border border-sky/20' :
+                              'bg-white/[0.03]'
+                        }`}
+                    >
+                      <span className="text-xs text-muted truncate mr-2">{item.label}</span>
+                      <div className="text-right flex-shrink-0">
+                        <div className={`text-sm font-semibold font-mono ${item.highlight === 'positive' ? 'text-accent' :
+                            item.highlight === 'negative' ? 'text-danger' :
+                              item.highlight === 'neutral' ? 'text-sky' :
+                                'text-text'
+                          }`}>
+                          {item.value}
+                        </div>
+                        {item.subValue && (
+                          <div className="text-[10px] text-muted/60 font-mono">
+                            {item.subValue}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
   );
 }
