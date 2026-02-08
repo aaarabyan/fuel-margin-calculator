@@ -13,13 +13,13 @@ import { CostBreakdownChart } from './components/CostBreakdownChart';
 import { ScenarioManager } from './components/ScenarioManager';
 import { ExportButton } from './components/ExportButton';
 import { SwipeSection } from './components/SwipeSection';
-import { Copy, Check, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
-import { fmtAmd0, fmtUsd2, fmtAmdPerL, fmtPct } from './format';
+import { ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
+
 
 export function App() {
   const [inputs, setInputs] = useLocalStorage<Inputs>('fuel-calc-inputs', DEFAULT_INPUTS);
   const [scenarios, setScenarios] = useLocalStorage<Scenario[]>('fuel-calc-scenarios', []);
-  const [copied, setCopied] = useState(false);
+
   const [showAnalytics, setShowAnalytics] = useState(true);
   const [showTable, setShowTable] = useState(true);
 
@@ -81,19 +81,7 @@ export function App() {
     setInputs(inp);
   }, [setInputs]);
 
-  const handleCopyResults = useCallback(() => {
-    const toUsd = (amd: number) => amd / result.rate;
-    const text = [
-      `⛽ ${result.fuelName}`,
-      `Чистая прибыль: ${fmtAmd0(result.netProfitAmd)} (≈ ${fmtUsd2(toUsd(result.netProfitAmd))})`,
-      `Маржа на литр: ${fmtAmdPerL(result.marginPerLAmd)} (${fmtPct(result.marginPct)})`,
-      `Себестоимость: ${fmtAmdPerL(result.costPerLAmd)}`,
-      `Безубыточность: ${fmtAmdPerL(result.breakEvenPriceAmd)}`,
-    ].join('\n');
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }, [result]);
+
 
   // Initialize density from fuel type on first load
   useEffect(() => {
@@ -150,13 +138,7 @@ export function App() {
               Калькулятор маржинальности топлива
             </h1>
           </div>
-          <button
-            onClick={handleCopyResults}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-line text-muted text-xs font-medium cursor-pointer hover:bg-white/10 hover:border-sky/20 transition-all duration-200"
-          >
-            {copied ? <Check size={14} className="text-accent" /> : <Copy size={14} />}
-            {copied ? 'Скопировано!' : 'Копировать'}
-          </button>
+          <ExportButton result={result} inputs={inputs} />
         </div>
 
         {/* Inputs + Summary row */}
