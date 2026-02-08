@@ -139,7 +139,7 @@ export function App() {
       </div>
 
       {/* Main content */}
-      <div className="max-w-[1200px] mx-auto px-3 sm:px-4 pt-[140px] sm:pt-6 pb-12" style={{ paddingBottom: 'calc(48px + env(safe-area-inset-bottom, 0px))' }}>
+      <div className="max-w-[1200px] mx-auto px-3 sm:px-4 sm:pt-6 pb-12" style={{ paddingTop: 'calc(140px + env(safe-area-inset-top, 0px))', paddingBottom: 'calc(48px + env(safe-area-inset-bottom, 0px))' }}>
         {/* Desktop header */}
         <div className="hidden sm:flex items-center justify-between mb-5">
           <div className="flex items-center gap-3">
