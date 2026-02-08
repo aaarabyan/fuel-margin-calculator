@@ -12,12 +12,59 @@ interface InputFieldProps {
 
 export function InputField({ label, value, onChange, step = '0.01', tooltip, suffix }: InputFieldProps) {
   const [showTooltip, setShowTooltip] = useState(false);
+  // Внутреннее строковое состояние для правильной обработки ввода
+  const [inputValue, setInputValue] = useState(value.toString());
+  const [isFocused, setIsFocused] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Синхронизация с внешним value когда поле не в фокусе
+  useEffect(() => {
+    if (!isFocused) {
+      setInputValue(value.toString());
+    }
+  }, [value, isFocused]);
 
   const handleTooltipToggle = (e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setShowTooltip(!showTooltip);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setInputValue(newValue);
+    
+    // Если значение пустое, не вызываем onChange (оставляем поле пустым визуально)
+    if (newValue === '' || newValue === '-') {
+      return;
+    }
+    
+    const numValue = parseFloat(newValue);
+    if (!isNaN(numValue)) {
+      onChange(numValue);
+    }
+  };
+
+  const handleBlur = () => {
+    setIsFocused(false);
+    // При потере фокуса, если поле пустое, устанавливаем 0
+    if (inputValue === '' || inputValue === '-') {
+      setInputValue('0');
+      onChange(0);
+    } else {
+      // Нормализуем значение (убираем лишние нули)
+      const numValue = parseFloat(inputValue) || 0;
+      setInputValue(numValue.toString());
+      onChange(numValue);
+    }
+  };
+
+  const handleFocus = () => {
+    setIsFocused(true);
+    // При фокусе, если значение 0, очищаем поле для удобства ввода
+    if (inputValue === '0') {
+      setInputValue('');
+    }
   };
 
   // Закрыть тултип при клике вне
@@ -80,11 +127,13 @@ export function InputField({ label, value, onChange, step = '0.01', tooltip, suf
 
       <div className="relative">
         <input
-          type="number"
+          type="text"
           inputMode="decimal"
           step={step}
-          value={value}
-          onChange={(e) => onChange(Number(e.target.value) || 0)}
+          value={inputValue}
+          onChange={handleInputChange}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
           className="w-full py-3 px-3 rounded-xl border border-line bg-input-bg text-text outline-none text-base font-semibold font-[inherit] transition-all duration-200 hover:border-sky/30 focus:border-accent focus:shadow-[0_0_0_3px_rgba(34,197,94,0.15)] min-h-[48px]"
         />
         {suffix && (
