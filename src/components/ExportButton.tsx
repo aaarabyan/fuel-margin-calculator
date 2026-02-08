@@ -125,11 +125,12 @@ export function ExportButton({ result, inputs }: ExportButtonProps) {
                 logging: false
             });
 
-            // Calculate PDF dimensions
+            // PDF dimensions
             const imgWidth = 210; // A4 width in mm
+            const pageHeight = 297; // A4 height in mm
             const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-            // Create PDF and add image
+            // Create PDF
             const pdf = new jsPDF({
                 orientation: 'portrait',
                 unit: 'mm',
@@ -137,7 +138,27 @@ export function ExportButton({ result, inputs }: ExportButtonProps) {
             });
 
             const imgData = canvas.toDataURL('image/jpeg', 0.95);
-            pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
+
+            // If content fits on one page
+            if (imgHeight <= pageHeight) {
+                pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
+            } else {
+                // Multi-page handling
+                let heightLeft = imgHeight;
+                let position = 0;
+
+                // First page
+                pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+                heightLeft -= pageHeight;
+
+                // Additional pages
+                while (heightLeft > 0) {
+                    position -= pageHeight;
+                    pdf.addPage();
+                    pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+                    heightLeft -= pageHeight;
+                }
+            }
 
             // Save PDF
             pdf.save(`sicosa-fuel-calc-${new Date().toISOString().slice(0, 10)}.pdf`);
