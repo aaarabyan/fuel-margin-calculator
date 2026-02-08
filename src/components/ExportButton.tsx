@@ -4,10 +4,7 @@ import type { CalcResult, Inputs } from '../types';
 import { fmtAmd0, fmtUsd2, fmtNum2, fmtNum4, fmtPct, fmtAmdPerL } from '../format';
 import { Download } from 'lucide-react';
 import { useState } from 'react';
-
-// Sicosa Energy logo as base64 (place your actual base64 logo here)
-// This is a placeholder - will be replaced with actual logo
-const LOGO_URL = '/sicosa-logo.png';
+import { SICOSA_LOGO_BASE64 } from '../assets/logo';
 
 interface ExportButtonProps {
     result: CalcResult;
@@ -41,7 +38,7 @@ export function ExportButton({ result, inputs }: ExportButtonProps) {
         container.innerHTML = `
             <!-- Watermark background -->
             <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); opacity: 0.08; pointer-events: none; z-index: 0;">
-                <img src="${LOGO_URL}" style="width: 400px; height: auto;" crossorigin="anonymous" />
+                <img src="${SICOSA_LOGO_BASE64}" style="width: 400px; height: auto;" />
             </div>
 
             <!-- Content -->
