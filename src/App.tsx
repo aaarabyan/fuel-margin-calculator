@@ -12,6 +12,7 @@ import { SensitivityChart } from './components/SensitivityChart';
 import { CostBreakdownChart } from './components/CostBreakdownChart';
 import { ScenarioManager } from './components/ScenarioManager';
 import { ExportButton } from './components/ExportButton';
+import { SwipeSection } from './components/SwipeSection';
 import { Copy, Check, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
 import { fmtAmd0, fmtUsd2, fmtAmdPerL, fmtPct } from './format';
 
@@ -257,9 +258,9 @@ export function App() {
           </button>
 
           {showAnalytics && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 animate-fade-in">
+            <SwipeSection labels={['Чувствительность', 'Структура', 'Сценарии']}>
               {/* Sensitivity chart */}
-              <div className="lg:col-span-2 bg-card backdrop-blur-xl border border-card-border rounded-[20px] p-4 sm:p-5 shadow-[0_4px_24px_rgba(0,0,0,0.2)]">
+              <div className="bg-card backdrop-blur-xl border border-card-border rounded-[20px] p-4 sm:p-5 shadow-[0_4px_24px_rgba(0,0,0,0.2)]">
                 <SensitivityChart inputs={inputs} />
               </div>
 
@@ -269,7 +270,7 @@ export function App() {
               </div>
 
               {/* Scenario manager */}
-              <div className="lg:col-span-3 bg-card backdrop-blur-xl border border-card-border rounded-[20px] p-4 sm:p-5 shadow-[0_4px_24px_rgba(0,0,0,0.2)]">
+              <div className="bg-card backdrop-blur-xl border border-card-border rounded-[20px] p-4 sm:p-5 shadow-[0_4px_24px_rgba(0,0,0,0.2)]">
                 <ScenarioManager
                   scenarios={scenarios}
                   onSave={handleSaveScenario}
@@ -278,7 +279,7 @@ export function App() {
                   currentInputs={inputs}
                 />
               </div>
-            </div>
+            </SwipeSection>
           )}
         </div>
 

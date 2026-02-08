@@ -1,7 +1,9 @@
+import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import type { CalcResult, Inputs } from '../types';
 import { fmtAmd0, fmtUsd2, fmtNum2, fmtNum4, fmtPct, fmtAmdPerL } from '../format';
 import { Download } from 'lucide-react';
+import { useState } from 'react';
 
 interface ExportButtonProps {
     result: CalcResult;
@@ -9,130 +11,124 @@ interface ExportButtonProps {
 }
 
 export function ExportButton({ result, inputs }: ExportButtonProps) {
-    const handleExport = () => {
-        const doc = new jsPDF({
-            orientation: 'portrait',
-            unit: 'mm',
-            format: 'a4',
-        });
+    const [loading, setLoading] = useState(false);
 
+    const handleExport = async () => {
+        setLoading(true);
         const r = result;
         const toUsd = (amd: number) => amd / r.rate;
 
-        // Title
-        doc.setFontSize(18);
-        doc.text('Калькулятор маржинальности топлива', 20, 20);
+        // Create hidden HTML element for rendering
+        const container = document.createElement('div');
+        container.style.cssText = `
+            position: fixed;
+            left: -9999px;
+            top: 0;
+            width: 595px;
+            background: white;
+            padding: 40px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            color: #1a1a2e;
+            font-size: 14px;
+            line-height: 1.6;
+        `;
 
-        doc.setFontSize(10);
-        doc.setTextColor(100);
-        doc.text(`Дата: ${new Date().toLocaleDateString('ru-RU')}`, 20, 28);
-        doc.text(`Тип топлива: ${r.fuelName}`, 100, 28);
+        container.innerHTML = `
+            <h1 style="font-size: 22px; margin-bottom: 8px; color: #1a1a2e; font-weight: 700;">Калькулятор маржинальности топлива</h1>
+            <p style="color: #666; font-size: 12px; margin-bottom: 24px;">
+                Дата: ${new Date().toLocaleDateString('ru-RU')} &nbsp;|&nbsp; Тип топлива: ${r.fuelName}
+            </p>
+            
+            <div style="background: ${r.netProfitAmd >= 0 ? '#dcfce7' : '#fee2e2'}; border-radius: 12px; padding: 16px; margin-bottom: 24px;">
+                <span style="font-size: 20px; font-weight: 700; color: ${r.netProfitAmd >= 0 ? '#166534' : '#dc2626'};">
+                    Чистая прибыль: ${fmtAmd0(r.netProfitAmd)} AMD
+                </span>
+                <span style="font-size: 14px; color: ${r.netProfitAmd >= 0 ? '#166534' : '#dc2626'}; margin-left: 8px;">
+                    (≈ ${fmtUsd2(toUsd(r.netProfitAmd))})
+                </span>
+            </div>
 
-        // Main result
-        doc.setFontSize(14);
-        doc.setTextColor(r.netProfitAmd >= 0 ? 34 : 220, r.netProfitAmd >= 0 ? 139 : 38, r.netProfitAmd >= 0 ? 34 : 38);
-        doc.text(`Чистая прибыль: ${fmtAmd0(r.netProfitAmd)} AMD (≈${fmtUsd2(toUsd(r.netProfitAmd))})`, 20, 40);
+            <h2 style="font-size: 15px; font-weight: 600; margin: 20px 0 12px; border-bottom: 2px solid #e5e5e5; padding-bottom: 8px;">📊 Входные данные</h2>
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                <tr style="border-bottom: 1px solid #f0f0f0;"><td style="padding: 8px 0;">Цена закупки</td><td style="text-align: right; font-weight: 500;">${inputs.purchaseUsd} $/т</td><td style="text-align: right; color: #666;">${fmtAmd0(r.purchaseAmd)} AMD</td></tr>
+                <tr style="border-bottom: 1px solid #f0f0f0;"><td style="padding: 8px 0;">Доставка</td><td style="text-align: right; font-weight: 500;">${inputs.deliveryUsd} $/т</td><td style="text-align: right; color: #666;">${fmtAmd0(r.deliveryAmd)} AMD</td></tr>
+                <tr style="border-bottom: 1px solid #f0f0f0;"><td style="padding: 8px 0;">Пошлина</td><td style="text-align: right; font-weight: 500;">${inputs.customsDutyUsd} $/т</td><td style="text-align: right; color: #666;">${fmtAmd0(r.customsDutyAmd)} AMD</td></tr>
+                <tr style="border-bottom: 1px solid #f0f0f0;"><td style="padding: 8px 0;">Цена продажи</td><td style="text-align: right; font-weight: 500;">${inputs.sellAmdPerL} AMD/л</td><td></td></tr>
+                <tr style="border-bottom: 1px solid #f0f0f0;"><td style="padding: 8px 0;">Тоннаж машины</td><td style="text-align: right; font-weight: 500;">${inputs.truckTons} т</td><td style="text-align: right; color: #666;">${fmtNum2(r.totalLiters)} л</td></tr>
+                <tr style="border-bottom: 1px solid #f0f0f0;"><td style="padding: 8px 0;">Курс доллара</td><td style="text-align: right; font-weight: 500;">${fmtNum2(inputs.usdRate)} AMD/$</td><td></td></tr>
+                <tr><td style="padding: 8px 0;">Плотность</td><td style="text-align: right; font-weight: 500;">${fmtNum4(inputs.density)} кг/л</td><td></td></tr>
+            </table>
 
-        let y = 55;
-        doc.setTextColor(0);
-        doc.setFontSize(12);
+            <h2 style="font-size: 15px; font-weight: 600; margin: 20px 0 12px; border-bottom: 2px solid #e5e5e5; padding-bottom: 8px;">💰 Налоги и сборы</h2>
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                <tr style="border-bottom: 1px solid #f0f0f0;"><td style="padding: 8px 0;">Акциз</td><td style="text-align: right; font-weight: 500;">${fmtAmd0(r.exciseAmd)} AMD/т</td></tr>
+                <tr style="border-bottom: 1px solid #f0f0f0;"><td style="padding: 8px 0;">Экологический налог (2%)</td><td style="text-align: right; font-weight: 500;">${fmtAmd0(r.ecoAmd)} AMD</td></tr>
+                <tr><td style="padding: 8px 0;">НДС 20%</td><td style="text-align: right; font-weight: 500;">${fmtAmd0(r.vatAmd)} AMD</td></tr>
+            </table>
 
-        // Input data section
-        doc.text('Входные данные', 20, y);
-        y += 8;
-        doc.setFontSize(10);
+            <h2 style="font-size: 15px; font-weight: 600; margin: 20px 0 12px; border-bottom: 2px solid #e5e5e5; padding-bottom: 8px;">📈 Расчёт на тонну</h2>
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                <tr style="border-bottom: 1px solid #f0f0f0;"><td style="padding: 8px 0;">Литров в тонне</td><td style="text-align: right; font-weight: 500;">${fmtNum2(r.litersPerTon)}</td></tr>
+                <tr style="border-bottom: 1px solid #f0f0f0;"><td style="padding: 8px 0;">Себестоимость литра</td><td style="text-align: right; font-weight: 500;">${fmtAmdPerL(r.costPerLAmd)}</td></tr>
+                <tr style="border-bottom: 1px solid #f0f0f0;"><td style="padding: 8px 0;">Маржа на литр</td><td style="text-align: right; font-weight: 500;">${fmtAmdPerL(r.marginPerLAmd)}</td></tr>
+                <tr style="border-bottom: 1px solid #f0f0f0;"><td style="padding: 8px 0;">Маржа %</td><td style="text-align: right; font-weight: 500;">${fmtPct(r.marginPct)}</td></tr>
+                <tr><td style="padding: 8px 0;">Итого затрат на тонну</td><td style="text-align: right; font-weight: 500;">${fmtAmd0(r.totalCostTonAmd)} AMD</td></tr>
+            </table>
 
-        const inputData = [
-            ['Цена закупки', `${inputs.purchaseUsd} $/т`, fmtAmd0(r.purchaseAmd) + ' AMD'],
-            ['Доставка', `${inputs.deliveryUsd} $/т`, fmtAmd0(r.deliveryAmd) + ' AMD'],
-            ['Пошлина', `${inputs.customsDutyUsd} $/т`, fmtAmd0(r.customsDutyAmd) + ' AMD'],
-            ['Цена продажи', `${inputs.sellAmdPerL} AMD/л`, ''],
-            ['Тоннаж машины', `${inputs.truckTons} т`, `${fmtNum2(r.totalLiters)} л`],
-            ['Курс доллара', `${fmtNum2(inputs.usdRate)} AMD/$`, ''],
-            ['Плотность', `${fmtNum4(inputs.density)} кг/л`, ''],
-        ];
+            <h2 style="font-size: 15px; font-weight: 600; margin: 20px 0 12px; border-bottom: 2px solid #e5e5e5; padding-bottom: 8px;">🚛 Расчёт на машину (${inputs.truckTons} т)</h2>
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                <tr style="border-bottom: 1px solid #f0f0f0;"><td style="padding: 8px 0;">Себестоимость всего</td><td style="text-align: right; font-weight: 500;">${fmtAmd0(r.totalCostTruckAmd)} AMD</td></tr>
+                <tr style="border-bottom: 1px solid #f0f0f0;"><td style="padding: 8px 0;">Выручка</td><td style="text-align: right; font-weight: 500;">${fmtAmd0(r.revenueTruckAmd)} AMD</td></tr>
+                <tr style="border-bottom: 1px solid #f0f0f0;"><td style="padding: 8px 0;">Доход</td><td style="text-align: right; font-weight: 500;">${fmtAmd0(r.incomeTruckAmd)} AMD</td></tr>
+                <tr><td style="padding: 8px 0;">Безубыточная цена</td><td style="text-align: right; font-weight: 500;">${fmtAmdPerL(r.breakEvenPriceAmd)}</td></tr>
+            </table>
 
-        inputData.forEach(row => {
-            doc.text(row[0], 25, y);
-            doc.text(row[1], 80, y);
-            if (row[2]) doc.text(row[2], 130, y);
-            y += 6;
-        });
+            <p style="margin-top: 32px; font-size: 11px; color: #999; text-align: center; border-top: 1px solid #e5e5e5; padding-top: 16px;">
+                Сгенерировано: Fuel Margin Calculator
+            </p>
+        `;
 
-        y += 5;
-        doc.setFontSize(12);
-        doc.text('Налоги и сборы', 20, y);
-        y += 8;
-        doc.setFontSize(10);
+        document.body.appendChild(container);
 
-        const taxData = [
-            ['Акциз', fmtAmd0(r.exciseAmd) + ' AMD/т'],
-            ['Экологический налог (2%)', fmtAmd0(r.ecoAmd) + ' AMD'],
-            ['НДС 20%', fmtAmd0(r.vatAmd) + ' AMD'],
-        ];
+        try {
+            // Render HTML to canvas
+            const canvas = await html2canvas(container, {
+                scale: 2,
+                useCORS: true,
+                backgroundColor: '#ffffff',
+                logging: false
+            });
 
-        taxData.forEach(row => {
-            doc.text(row[0], 25, y);
-            doc.text(row[1], 100, y);
-            y += 6;
-        });
+            // Calculate PDF dimensions
+            const imgWidth = 210; // A4 width in mm
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-        y += 5;
-        doc.setFontSize(12);
-        doc.text('Расчёт на тонну', 20, y);
-        y += 8;
-        doc.setFontSize(10);
+            // Create PDF and add image
+            const pdf = new jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: 'a4'
+            });
 
-        const perTonData = [
-            ['Литров в тонне', fmtNum2(r.litersPerTon)],
-            ['Себестоимость литра', fmtAmdPerL(r.costPerLAmd)],
-            ['Маржа на литр', fmtAmdPerL(r.marginPerLAmd)],
-            ['Маржа %', fmtPct(r.marginPct)],
-            ['Итого затрат на тонну', fmtAmd0(r.totalCostTonAmd) + ' AMD'],
-        ];
+            const imgData = canvas.toDataURL('image/jpeg', 0.95);
+            pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
 
-        perTonData.forEach(row => {
-            doc.text(row[0], 25, y);
-            doc.text(row[1], 100, y);
-            y += 6;
-        });
-
-        y += 5;
-        doc.setFontSize(12);
-        doc.text('Расчёт на машину', 20, y);
-        y += 8;
-        doc.setFontSize(10);
-
-        const truckData = [
-            ['Себестоимость всего', fmtAmd0(r.totalCostTruckAmd) + ' AMD'],
-            ['Выручка', fmtAmd0(r.revenueTruckAmd) + ' AMD'],
-            ['Доход', fmtAmd0(r.incomeTruckAmd) + ' AMD'],
-            ['Безубыточная цена', fmtAmdPerL(r.breakEvenPriceAmd)],
-        ];
-
-        truckData.forEach(row => {
-            doc.text(row[0], 25, y);
-            doc.text(row[1], 100, y);
-            y += 6;
-        });
-
-        // Footer
-        doc.setFontSize(8);
-        doc.setTextColor(150);
-        doc.text('Сгенерировано: Fuel Margin Calculator', 20, 285);
-
-        // Save
-        const filename = `fuel-calc-${new Date().toISOString().slice(0, 10)}.pdf`;
-        doc.save(filename);
+            // Save PDF
+            pdf.save(`fuel-calc-${new Date().toISOString().slice(0, 10)}.pdf`);
+        } finally {
+            document.body.removeChild(container);
+            setLoading(false);
+        }
     };
 
     return (
         <button
             onClick={handleExport}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-sky/20 hover:bg-sky/30 text-sky font-medium text-sm transition-colors"
+            disabled={loading}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-sky/20 hover:bg-sky/30 text-sky font-medium text-sm transition-colors disabled:opacity-50"
         >
-            <Download size={16} />
-            <span className="hidden sm:inline">Скачать PDF</span>
+            <Download size={16} className={loading ? 'animate-spin' : ''} />
+            <span className="hidden sm:inline">{loading ? 'Создание...' : 'Скачать PDF'}</span>
             <span className="sm:hidden">PDF</span>
         </button>
     );

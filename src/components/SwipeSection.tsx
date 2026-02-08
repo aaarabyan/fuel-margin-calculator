@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect, ReactNode } from 'react';
+import { useRef, useState, useEffect, useCallback, ReactNode } from 'react';
 
 interface SwipeSectionProps {
     children: ReactNode[];
@@ -17,34 +17,49 @@ export function SwipeSection({ children, labels }: SwipeSectionProps) {
         return () => window.removeEventListener('resize', checkMobile);
     }, []);
 
-    useEffect(() => {
+    // Handle scroll events to sync active index
+    const handleScroll = useCallback(() => {
         const container = containerRef.current;
         if (!container) return;
 
-        const handleScroll = () => {
-            const scrollLeft = container.scrollLeft;
-            const childWidth = container.offsetWidth;
-            const newIndex = Math.round(scrollLeft / childWidth);
-            setActiveIndex(Math.min(newIndex, children.length - 1));
-        };
+        const scrollLeft = container.scrollLeft;
+        const childWidth = container.offsetWidth;
 
-        container.addEventListener('scroll', handleScroll);
+        if (childWidth === 0) return;
+
+        const newIndex = Math.round(scrollLeft / childWidth);
+        const clampedIndex = Math.max(0, Math.min(newIndex, children.length - 1));
+
+        if (clampedIndex !== activeIndex) {
+            setActiveIndex(clampedIndex);
+        }
+    }, [children.length, activeIndex]);
+
+    useEffect(() => {
+        const container = containerRef.current;
+        if (!container || !isMobile) return;
+
+        container.addEventListener('scroll', handleScroll, { passive: true });
         return () => container.removeEventListener('scroll', handleScroll);
-    }, [children.length]);
+    }, [handleScroll, isMobile]);
 
     const scrollTo = (index: number) => {
         const container = containerRef.current;
         if (!container) return;
+
+        setActiveIndex(index);
         const childWidth = container.offsetWidth;
         container.scrollTo({ left: childWidth * index, behavior: 'smooth' });
     };
 
-    // На десктопе показываем все секции вертикально
+    // Desktop: show all sections in grid
     if (!isMobile) {
         return (
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 animate-fade-in">
                 {children.map((child, i) => (
-                    <div key={i}>{child}</div>
+                    <div key={i} className={i === 0 ? 'lg:col-span-2' : i === children.length - 1 ? 'lg:col-span-3' : ''}>
+                        {child}
+                    </div>
                 ))}
             </div>
         );
@@ -54,14 +69,14 @@ export function SwipeSection({ children, labels }: SwipeSectionProps) {
         <div className="relative">
             {/* Tabs */}
             {labels && labels.length > 0 && (
-                <div className="flex gap-1 mb-3 overflow-x-auto pb-1 -mx-1 px-1">
+                <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
                     {labels.map((label, i) => (
                         <button
                             key={i}
                             onClick={() => scrollTo(i)}
-                            className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${activeIndex === i
-                                    ? 'bg-sky/20 text-sky'
-                                    : 'bg-white/5 text-muted hover:bg-white/10'
+                            className={`flex-shrink-0 px-4 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${activeIndex === i
+                                ? 'bg-sky/20 text-sky border border-sky/30'
+                                : 'bg-white/5 text-muted hover:bg-white/10 border border-transparent'
                                 }`}
                         >
                             {label}
@@ -73,7 +88,7 @@ export function SwipeSection({ children, labels }: SwipeSectionProps) {
             {/* Swipe container */}
             <div
                 ref={containerRef}
-                className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide -mx-4 px-4"
+                className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide"
                 style={{
                     scrollbarWidth: 'none',
                     msOverflowStyle: 'none',
@@ -83,7 +98,8 @@ export function SwipeSection({ children, labels }: SwipeSectionProps) {
                 {children.map((child, i) => (
                     <div
                         key={i}
-                        className="flex-shrink-0 w-full snap-center pr-4 last:pr-0"
+                        className="flex-shrink-0 w-full snap-center"
+                        style={{ minWidth: '100%' }}
                     >
                         {child}
                     </div>
@@ -92,14 +108,14 @@ export function SwipeSection({ children, labels }: SwipeSectionProps) {
 
             {/* Dots indicator */}
             {children.length > 1 && (
-                <div className="flex justify-center gap-1.5 mt-3">
+                <div className="flex justify-center gap-2 mt-4">
                     {children.map((_, i) => (
                         <button
                             key={i}
                             onClick={() => scrollTo(i)}
-                            className={`w-2 h-2 rounded-full transition-all ${activeIndex === i
-                                    ? 'bg-sky w-4'
-                                    : 'bg-white/20 hover:bg-white/30'
+                            className={`h-2 rounded-full transition-all duration-200 ${activeIndex === i
+                                ? 'bg-sky w-6'
+                                : 'bg-white/20 hover:bg-white/30 w-2'
                                 }`}
                         />
                     ))}
